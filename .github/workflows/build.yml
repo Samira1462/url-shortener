@@ -1,3 +1,5 @@
+name: Java CI
+
 on: [push]
 
 jobs:
@@ -5,7 +7,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Set up JDK 11
         uses: actions/setup-java@v3
@@ -16,10 +19,10 @@ jobs:
       - name: Maven Build
         run: |
           mvn -B clean package
-          mkdir staging
-          cp target/*.jar staging
+          mkdir -p staging
+          cp target/*.jar staging/
 
-      - name: Artifact Upload
+      - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
           name: Package
