@@ -1,18 +1,20 @@
 package de.example.urlshortener.exception;
 
-import lombok.Getter;
+import java.time.LocalDateTime;
 
-import java.util.Date;
+import static java.time.LocalDateTime.now;
 
-@Getter
-public final class ErrorDetails {
-    private final Date timestamp;
-    private final String message;
-    private final String details;
 
-    public ErrorDetails(Date timestamp, String message, String details) {
-        this.timestamp = timestamp;
-        this.message = message;
-        this.details = details;
+public record ErrorDetails(
+        LocalDateTime timestamp,
+        String message,
+        String details
+) {
+    public static ErrorDetails from(Throwable throwable) {
+        return new ErrorDetails(now(), throwable.getMessage(), throwable.getClass().getSimpleName());
+    }
+
+    public static ErrorDetails from(Throwable throwable, String details) {
+        return new ErrorDetails(now(), throwable.getMessage(), details);
     }
 }

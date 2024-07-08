@@ -1,0 +1,6 @@
+server:
+  port: 8080
+
+baseUrl: https://bl.co/
+NotFound:
+  ErrorMessage: URL Not Found

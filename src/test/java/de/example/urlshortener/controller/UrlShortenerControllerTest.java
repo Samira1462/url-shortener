@@ -3,18 +3,20 @@ package de.example.urlshortener.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.example.urlshortener.dto.RequestDto;
 import de.example.urlshortener.dto.ResponseDto;
-import de.example.urlshortener.service.UrlShortenerServiceImpl;
+import de.example.urlshortener.service.UrlShortenerService;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultActions;
 
 import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -24,70 +26,82 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest
 class UrlShortenerControllerTest {
 
+    public static final String ENCODE_ENDPOINT = "/api/v1/encode";
+    public static final String DECODE_ENDPOINT = "/api/v1/decode";
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
     @MockBean
-    private UrlShortenerServiceImpl serviceUnderTest;
+    private UrlShortenerService urlShortenerService;
 
-    @Test
-    void encodeUrl_whenRequestDto_thenReturnShorterUrl() throws Exception {
-        RequestDto dto = new RequestDto();
-        dto.setUrl("http://home.com");
-        ResponseDto expected = new ResponseDto("http://home.com", new StringBuilder("https://bl.co/FVkLdT"));
+    @Nested
+    @DisplayName("encoding unit tests")
+    class EncodeUrlTest {
 
-        when(serviceUnderTest.encode(dto.getUrl())).thenReturn(Optional.of(expected));
+        @Test
+        void givenOriginalUrl_thenReturnShorterUrl() throws Exception {
+            var givenRequestBody = new RequestDto("http://home.com");
+            var expected = new ResponseDto("http://home.com", "https://bl.co/FVkLdT");
 
-        ResultActions actual = mockMvc.perform(post("/api/v1/encode")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)));
+            when(urlShortenerService.encode(givenRequestBody.url())).thenReturn(Optional.of(expected));
 
-        actual.andExpect(status().isCreated())
-                .andExpect(jsonPath("$.originalUrl").value(expected.getOriginalUrl()))
-                .andExpect(jsonPath("$.shortUrl").value(expected.getShortUrl().toString()))
-                .andDo(print());
+            mockMvc.perform(post(ENCODE_ENDPOINT)
+                            .contentType(APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(givenRequestBody)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.originalUrl").value(expected.originalUrl()))
+                    .andExpect(jsonPath("$.shortUrl").value(expected.shortUrl()))
+                    .andDo(print());
+        }
+
+        @Test
+        void givenInvalidOriginalUrl_thenReturn4XX() throws Exception {
+            var givenRequestBody = new RequestDto("home.com");
+            mockMvc.perform(post(ENCODE_ENDPOINT)
+                            .contentType(APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(givenRequestBody)))
+                    .andExpect(status().is4xxClientError());
+        }
+
+        @Test
+        void givenWrongBodyType_thenReturn5XX() throws Exception {
+            var givenRequestBody = "http://home.com";
+            mockMvc.perform(post(ENCODE_ENDPOINT)
+                            .contentType(APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(givenRequestBody)))
+                    .andExpect(status().is5xxServerError());
+        }
+
     }
 
-    @Test
-    void encodeUrl_whenInvalidData_thenReturn4XX() throws Exception {
-        RequestDto dto = new RequestDto();
-        dto.setUrl("http://home.com"+ "}");
-        mockMvc.perform(post("/api/v1/encode")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().is4xxClientError());
-    }
-    @Test
-    void encodeUrl_whenInvalidData_thenReturn5XX() throws Exception {
-        mockMvc.perform(post("/api/v1/encode")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString("http://home.com")))
-                .andExpect(status().is5xxServerError());
-    }
+    @Nested
+    @DisplayName("decoding unit tests")
+    class DecodeUrlTest {
 
-    @Test
-    void decodeShortUrl_whenShorterUrl_thenReturnLongUrl() throws Exception {
-        String shortUrl = "https://bl.co/FVkLdT";
-        ResponseDto expected = new ResponseDto("http://home.com", new StringBuilder("https://bl.co/FVkLdT"));
-        when(serviceUnderTest.decode(shortUrl)).thenReturn(Optional.of(expected));
+        @Test
+        void givenShortUrl_thenReturnOriginalUrl() throws Exception {
+            var givenShortUrl = "https://bl.co/FVkLdT";
+            var expected = new ResponseDto("http://home.com", "https://bl.co/FVkLdT");
 
-        ResultActions actual = mockMvc.perform(get("/api/v1/decode")
-                .contentType(MediaType.APPLICATION_JSON)
-                .param("shortUrl", shortUrl));
+            when(urlShortenerService.decode(any())).thenReturn(Optional.of(expected));
 
-        actual.andExpect(status().isOk())
-                .andExpect(jsonPath("$.originalUrl").exists());
-    }
+            mockMvc.perform(get(DECODE_ENDPOINT)
+                            .contentType(APPLICATION_JSON)
+                            .param("shortUrl", givenShortUrl))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.originalUrl").exists());
+        }
 
-    @Test
-    void decodeShortUrl_whenInvalidData_thenReturn4XX() throws Exception {
-        String shortUrl = "";
+        @Test
+        void givenEmptyUrl_thenReturn4XX() throws Exception {
+            var givenShortUrl = "";
 
-        mockMvc.perform(get("/api/v1/decode")
-                        .param("shortUrl", shortUrl))
-                .andExpect(status().is4xxClientError());
+            mockMvc.perform(get(DECODE_ENDPOINT)
+                            .param("shortUrl", givenShortUrl))
+                    .andExpect(status().is4xxClientError());
+        }
     }
 }

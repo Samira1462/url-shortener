@@ -1,4 +1,4 @@
-name: Java CI
+name: Url Shortener App
 
 on: [push]
 

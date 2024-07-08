@@ -1,103 +1,69 @@
 package de.example.urlshortener.service;
 
-import de.example.urlshortener.dto.ResponseDto;
 import de.example.urlshortener.entity.Url;
 import de.example.urlshortener.exception.NotFoundException;
-import de.example.urlshortener.repository.UrlRepository;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
-import java.lang.reflect.Field;
-import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
-import static de.example.urlshortener.repository.UrlRepository.getOriginalUrl;
-import static de.example.urlshortener.repository.UrlRepository.getShortenerUrl;
+import static de.example.urlshortener.database.InMemoryDatabase.IN_MEMORY_DB;
 import static org.junit.jupiter.api.Assertions.*;
 
-@ExtendWith(MockitoExtension.class)
+@SpringBootTest
 public class UrlShortenerServiceImplTest {
 
-    @InjectMocks
-    private UrlShortenerServiceImpl urlShortenerServiceUnderTest;
+    private static final String ORIGINAL_URL = "http://home.com";
 
-    static Map<String, Url> repo;
+    private static final String SHORT_URL = "https://bl.co/abcd";
 
-    @BeforeAll
-    public static void initializeRepo() throws Exception {
-        Field field = UrlRepository.class.getDeclaredField("repo");
-        field.setAccessible(true);
-        repo = (Map<String, Url>) field.get(UrlRepository.class);
-        var id = UUID.randomUUID();
-        repo.put(id.toString(), new Url(id.toString(), "http://home.com", new StringBuilder("http://bl.co/abdcfg")));
-    }
+    @Autowired
+    private UrlShortenerService systemUnderTest;
 
-    @Test
-    public void encode_whenUrlExists_thenReturnResponseDto() {
-        String longUrl = "http://home.com";
-        StringBuilder shortUrl = new StringBuilder("http://bl.co/abdcfg");
-        Optional<Map.Entry<String, Url>> result = getOriginalUrl("http://home.com");
-        try (MockedStatic<UrlRepository> urlRepositoryMockedStatic = Mockito.mockStatic(UrlRepository.class)) {
-            urlRepositoryMockedStatic.when(() -> getOriginalUrl(longUrl)).thenReturn(result);
+    @Nested
+    class EncodeTest {
+        @BeforeEach
+        void setUp() {
+            IN_MEMORY_DB.clear();
         }
 
-        Optional<ResponseDto> actual = urlShortenerServiceUnderTest.encode(longUrl);
+        @Test
+        public void encode_whenUrlExists_thenReturnResponseDto() {
+            var actual = systemUnderTest.encode(ORIGINAL_URL);
 
-        ResponseDto responseDto = actual.get();
-        assertEquals(longUrl, responseDto.getOriginalUrl());
-        assertEquals(shortUrl.toString(), responseDto.getShortUrl().toString());
-        assertNotNull(responseDto);
+            assertNotNull(actual);
+            assertTrue(actual.isPresent());
+            assertNotNull(actual.get().shortUrl());
+        }
     }
 
-    @Test
-    public void encode_whenUrlDoesNotExistInRepo_thenAddAndReturnResponseDto() {
+    @Nested
+    class DecodeTest {
 
-        String longUrl = "http://home.com";
-        String shortUrl = "http://bl.co/abdcfg";
-
-        try (MockedStatic<UrlRepository> urlRepositoryMockedStatic = Mockito.mockStatic(UrlRepository.class)) {
-            urlRepositoryMockedStatic.when(() -> getOriginalUrl(longUrl)).thenReturn(Optional.empty());
+        @BeforeEach
+        void setUp() {
+            var url = new Url(UUID.randomUUID().toString(), ORIGINAL_URL, SHORT_URL);
+            IN_MEMORY_DB.putIfAbsent(url.id(), url);
         }
 
-        Optional<ResponseDto> result = urlShortenerServiceUnderTest.encode(longUrl);
+        @Test
+        public void givenShortUrl_thenReturnOriginalUrl() {
 
-        assertTrue(result.isPresent());
-        ResponseDto responseDto = result.get();
-        assertEquals(shortUrl, responseDto.getShortUrl().toString());
-    }
+            var actual = systemUnderTest.decode(SHORT_URL);
 
-    @Test
-    public void decode_whenShortenerUrlExists_thenReturnResponseDto() {
-
-        StringBuilder shortenerUrl = new StringBuilder("http://bl.co/abdcfg");
-        String longUrl = "http://home.com";
-        Optional<Map.Entry<String, Url>> result = getShortenerUrl(shortenerUrl);
-        try (MockedStatic<UrlRepository> urlRepositoryMockedStatic = Mockito.mockStatic(UrlRepository.class)) {
-            urlRepositoryMockedStatic.when(() -> getShortenerUrl(shortenerUrl)).thenReturn(result);
+            assertNotNull(actual);
+            assertTrue(actual.isPresent());
+            assertEquals(ORIGINAL_URL, actual.get().originalUrl());
         }
 
-        Optional<ResponseDto> actual = urlShortenerServiceUnderTest.decode(shortenerUrl.toString());
-
-        assertTrue(result.isPresent());
-        ResponseDto responseDto = actual.get();
-        assertEquals(longUrl, responseDto.getOriginalUrl());
-    }
-
-    @Test
-    public void decode_whenShortenerUrlDoesNotExist_thenThrowNotFoundException() {
-
-        StringBuilder shortenerUrl = new StringBuilder("");
-
-        try (MockedStatic<UrlRepository> urlRepositoryMockedStatic = Mockito.mockStatic(UrlRepository.class)) {
-            urlRepositoryMockedStatic.when(() -> getShortenerUrl(shortenerUrl)).thenReturn(Optional.empty());
+        @Test
+        public void givenEmptyShortUrl_thenThrowNotFoundException() {
+            var givenShorUrl = "";
+            assertThrows(NotFoundException.class, () -> systemUnderTest.decode(givenShorUrl));
         }
-
-        assertThrows(NotFoundException.class, () -> urlShortenerServiceUnderTest.decode(shortenerUrl.toString()));
     }
 }
+

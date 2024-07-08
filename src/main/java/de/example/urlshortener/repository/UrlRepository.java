@@ -1,31 +1,35 @@
 package de.example.urlshortener.repository;
 
 import de.example.urlshortener.entity.Url;
+import org.springframework.stereotype.Repository;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
-public final class UrlRepository {
+import static de.example.urlshortener.database.InMemoryDatabase.IN_MEMORY_DB;
+
+@Repository
+public class UrlRepository {
+
+
     private UrlRepository() {
     }
-    private static final Map<String, Url> repo = new HashMap<>();
 
-    public static Optional<Map.Entry<String, Url>> getShortenerUrl(StringBuilder shortenerUrl) {
-        return repo.entrySet().stream()
-                .filter(url -> url.getValue().getShortenerUrl().compareTo(shortenerUrl) == 0)
+    public Optional<Url> getShortUrl(String shortUrl) {
+        return IN_MEMORY_DB.values()
+                .stream()
+                .filter(url -> url.shortUrl().equals(shortUrl))
                 .findFirst();
 
     }
 
-    public static Optional<Map.Entry<String, Url>> getOriginalUrl(String originalUrl) {
-        return repo.entrySet().stream()
-                .filter(url -> url.getValue().getLongUrl().equals(originalUrl))
+    public Optional<Url> getOriginalUrl(String originalUrl) {
+        return IN_MEMORY_DB.values()
+                .stream()
+                .filter(url -> url.originalUrl().equals(originalUrl))
                 .findFirst();
     }
-    public static void addUrlShortener(String id, Url url) {
-        if (!repo.containsValue(url)) {
-            UrlRepository.repo.put( id ,url);
-        }
+
+    public void addShortedUrl(String id, Url url) {
+        IN_MEMORY_DB.putIfAbsent(id, url);
     }
 }

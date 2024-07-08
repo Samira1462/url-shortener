@@ -1,95 +1,88 @@
 package de.example.urlshortener.repository;
 
 import de.example.urlshortener.entity.Url;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
-import java.lang.reflect.Field;
-import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
+import static de.example.urlshortener.database.InMemoryDatabase.IN_MEMORY_DB;
 import static org.junit.jupiter.api.Assertions.*;
 
+@SpringBootTest
 class UrlRepositoryTest {
-    static Map<String, Url> repo;
 
-    @BeforeAll
-    public static void initializeRepo() throws Exception {
-        Field field = UrlRepository.class.getDeclaredField("repo");
-        field.setAccessible(true);
-        repo = (Map<String, Url>) field.get(UrlRepository.class);
-        repo.clear();
+    @Autowired
+    private UrlRepository systemUnderTest;
+
+    @BeforeEach
+    void setUp() {
+        IN_MEMORY_DB.clear();
     }
 
     @Test
     public void getShortenerUrl_whenShortenerUrlExists_thenReturnOptionalWithMatchingEntry() {
         var id = UUID.randomUUID();
-        Url url = new Url(id.toString(), "http://home.com", new StringBuilder("http://bl.co/abdcfg"));
-        UrlRepository.addUrlShortener(id.toString(), url);
+        var url = new Url(id.toString(), "http://home.com", "http://bl.co/abdcfg");
+        systemUnderTest.addShortedUrl(id.toString(), url);
 
-        Optional<Map.Entry<String, Url>> result = UrlRepository.getShortenerUrl(new StringBuilder("http://bl.co/abdcfg"));
+        var actual = systemUnderTest.getShortUrl("http://bl.co/abdcfg");
 
-        assertTrue(result.isPresent());
-        assertEquals(id.toString(), result.get().getKey());
-        assertEquals(url, result.get().getValue());
-
-        repo.clear();
+        assertTrue(actual.isPresent());
+        assertEquals(id.toString(), actual.get().id());
+        assertEquals(url.shortUrl(), actual.get().shortUrl());
     }
 
     @Test
-    public void getShortenerUrl_whenShortenerUrlDoesNotExist_thenReturnEmptyOptional() {
-        Optional<Map.Entry<String, Url>> result = UrlRepository.getShortenerUrl(new StringBuilder(""));
+    public void getShortenerUrl_whenShortUrlDoesNotExist_thenReturnEmptyOptional() {
+        var actual = systemUnderTest.getShortUrl("");
 
-        assertFalse(result.isPresent());
+        assertFalse(actual.isPresent());
     }
 
     @Test
     public void getUrl_whenOriginalUrlExists_thenReturnOptionalWithMatchingEntry() {
         var id = UUID.randomUUID();
-        Url url = new Url(id.toString(), "http://home.com", new StringBuilder("http://bl.co/abdcfg"));
-        UrlRepository.addUrlShortener(id.toString(), url);
+        var url = new Url(id.toString(), "http://home.com", "http://bl.co/abdcfg");
+        systemUnderTest.addShortedUrl(id.toString(), url);
 
-        Optional<Map.Entry<String, Url>> result = UrlRepository.getOriginalUrl("http://home.com");
+        var actual = systemUnderTest.getOriginalUrl("http://home.com");
 
-        assertTrue(result.isPresent());
-        assertEquals(url, result.get().getValue());
-
-        repo.clear();
+        assertTrue(actual.isPresent());
+        assertEquals(url, actual.get());
     }
 
     @Test
     public void getUrl_whenOriginalUrlDoesNotExist_thenReturnEmptyOptional() {
-        Optional<Map.Entry<String, Url>> result = UrlRepository.getOriginalUrl("");
+        var actual = systemUnderTest.getOriginalUrl("");
 
-        assertFalse(result.isPresent());
+        assertFalse(actual.isPresent());
     }
 
     @Test
     public void addUrlShortener_whenUrlNotInRepository_thenAddUrl() {
         var id = UUID.randomUUID();
-        Url url = new Url(id.toString(), "http://home.com", new StringBuilder("http://bl.co/abdcfg"));
+        var url = new Url(id.toString(), "http://home.com", "http://bl.co/abdcfg");
 
-        UrlRepository.addUrlShortener(id.toString(), url);
+        systemUnderTest.addShortedUrl(id.toString(), url);
 
-        assertTrue(repo.containsKey(id.toString()));
-        assertEquals(url, repo.get(id.toString()));
-
-        repo.clear();
+        assertTrue(IN_MEMORY_DB.containsKey(id.toString()));
+        assertEquals(url, IN_MEMORY_DB.get(id.toString()));
     }
 
     @Test
-    public void addUrlShortener_whenUrlAlreadyInRepository_thenNotAddUrl() {
+    public void addUrlShortener_whenUrlAlreadyInRepository_thenNotAddShortedUrl() {
         var id = UUID.randomUUID().toString();
-        Url url1 = new Url(id,"http://home.com", new StringBuilder("http://bl.co/abdcfg"));
-        Url url2 = new Url(id,"http://home.com", new StringBuilder("http://bl.co/abdcfg"));
+        var url1 = new Url(id, "http://home.com", "http://bl.co/abdcfg");
+        var url2 = new Url(id, "http://home.com", "http://bl.co/abdcfg");
 
-        UrlRepository.addUrlShortener(id, url1);
-        UrlRepository.addUrlShortener(id, url2);
+        systemUnderTest.addShortedUrl(id, url1);
+        systemUnderTest.addShortedUrl(id, url2);
 
-        assertEquals(1, repo.size());
-        assertTrue(repo.containsKey(id));
+        assertEquals(1, IN_MEMORY_DB.size());
+        assertTrue(IN_MEMORY_DB.containsKey(id));
 
-        repo.clear();
     }
 }

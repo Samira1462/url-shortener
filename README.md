@@ -50,7 +50,7 @@ specified requirement.
 
 The project uses the following technologies:
 
-* [Java 21](https://www.oracle.com/java/technologies/downloads/)
+* [Java 17](https://www.oracle.com/java/technologies/downloads/)
 * [Maven 3](https://maven.apache.org/index.html)
 
 ## Pipeline
