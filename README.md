@@ -1,38 +1,87 @@
-### Objective
+# <p align="center">URL Shortener</p>
 
-Your assignment is to implement a URL shortening service using Java and Spring.
+# Assigment
 
-### Brief
+## Objective
 
-ShortLink is a URL shortening service where you enter a URL such as https://codesubmit.io/library/react and it returns a short URL such as http://short.est/GeAi9K.
+ Implement a URL shortening service using Java and Spring.
 
-### Tasks
+## Brief
 
--   Implement assignment using:
-    -   Language: **Java**
-    -   Framework: **Spring**
-    -   Two endpoints are required
-        -   /encode - Encodes a URL to a shortened URL
-        -   /decode - Decodes a shortened URL to its original URL.
-    -   Both endpoints should return JSON
-    -   Choose the HTTP verbs that make the most sense.
--   There is no restriction on how your encode/decode algorithm should work. You just need to make sure that a URL can be encoded to a short URL and the short URL can be decoded to the original URL. **You do not need to persist short URLs to a database. Keep them in memory.**
--   Provide detailed instructions on how to run your assignment in a separate markdown file
--   Provide API tests for both endpoints
+ShortLink is a URL shortening service where you enter a URL such as https://codesubmit.io/library/react and it returns a
+short URL such as http://short.est/GeAi9K.
 
-### Evaluation Criteria
+## Use case
 
--   Java & Spring best practices
--   API implemented featuring a /encode and /decode endpoint
--   Tests
--   Implementation of the shortening algorithm (Algorithm Correctness, Requirement Fulfillment)
--   Original code. We want to evaluate your programming skills, copy-pasting a solution does not help with that and will lead to a rejection.
+- Implement assignment using:
+    - Language: **Java**
+    - Framework: **Spring**
+    - Two endpoints are required
+        - /encode - Encodes a URL to a shortened URL
+        - /decode - Decodes a shortened URL to its original URL.
+    - Both endpoints should return JSON
+    - Choose the HTTP verbs that make the most sense.
+- There is no restriction on how your encode/decode algorithm should work. You just need to make sure that a URL can be
+  encoded to a short URL and the short URL can be decoded to the original URL. **You do not need to persist short URLs
+  to a database. Keep them in memory.**
+- Provide detailed instructions on how to run your assignment in a separate markdown file
+- Provide API tests for both endpoints
 
-### CodeSubmit
+## Criteria
 
-Please organize, design, test and document your code as if it were going into production - then push your changes to the master branch. After you have pushed your code, you may submit the assignment on the assignment page.
+- Java & Spring best practices
+- API implemented featuring a /encode and /decode endpoint
+- Tests
+- Implementation of the shortening algorithm (Algorithm Correctness, Requirement Fulfillment)
 
-All the best and happy coding
+# Solution
 
-### ThoughtProcess
-A [thought-process.md](thought-process.md) file
+## Functional and Nun-functional
+
+Q. What is the traffic load or the compacted URLs duration?
+Q. How many request per min this server(url shorter) must be handel it?
+
+for solving URL shortener I assume that we intend to accommodate over a billion URLs, I use utilize a character set of
+62 characters, including A-Z, a-z, and 0-9, to form short URLs with a length of 'n.' (In this case n=6) This grants us a
+total of 62^n unique URLs. To meet our needs, we should strive for the shortest possible URL length while satisfying the
+specified requirement.
+
+## Prerequisites
+
+The project uses the following technologies:
+
+* [Java 21](https://www.oracle.com/java/technologies/downloads/)
+* [Maven 3](https://maven.apache.org/index.html)
+
+## Pipeline
+
+### Clone the Repository
+
+ ```shell 
+ git clone git@github.com:Samira1462/url-shortener.git
+```
+
+### Build
+
+```shell
+mvn clean package -DskipTests=true
+```
+
+### Test
+
+```shell
+mvn test
+```
+
+### Run
+
+```shell
+ mvn spring-boot:run
+```
+
+### Access the Application
+
+* The application will be available at [http://localhost:8080](http://localhost:8080).
+* Swagger [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
+* You can use a tool like Postman or curl to interact with the provided endpoints.
+
